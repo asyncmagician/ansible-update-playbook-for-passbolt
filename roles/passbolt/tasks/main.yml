@@ -35,7 +35,7 @@
         bash -lc "/usr/share/php/passbolt/bin/cake cache clear_all"
       args:
         chdir: /usr/share/php/passbolt
-      become_user: "{{ passbolt.webserver }}"
+      become_user: "www-data"
 
     - name: Start nginx
       ansible.builtin.service:
@@ -47,14 +47,14 @@
         bash -lc "/usr/share/php/passbolt/bin/cake passbolt cleanup"
       args:
         chdir: /usr/share/php/passbolt
-      become_user: "{{ passbolt.webserver }}"
+      become_user: "www-data"
 
     - name: Show current Passbolt version
       ansible.builtin.command: >
         bash -lc "/usr/share/php/passbolt/bin/cake passbolt version"
       args:
         chdir: /usr/share/php/passbolt
-      become_user: "{{ passbolt.webserver }}"
+      become_user: "www-data"
       register: passbolt_version
 
     - name: Display Passbolt version
