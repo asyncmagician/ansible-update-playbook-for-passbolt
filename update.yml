@@ -1,0 +1,6 @@
+---
+- name: "Update passbolt server"
+  hosts: all
+  become: true
+  roles: 
+    - passbolt

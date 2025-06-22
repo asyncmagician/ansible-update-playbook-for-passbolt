@@ -1,0 +1,64 @@
+- name: Check if Passbolt Pro package is upgradable
+  ansible.builtin.shell: |
+    apt list --upgradable 2>/dev/null \
+      | grep -E "^passbolt-pro-server/"
+  register: passbolt_upgradable
+  changed_when: false
+  failed_when: false
+
+- name: Passbolt Pro is already up to date
+  ansible.builtin.debug:
+    msg: "✋ passbolt-pro-server is already at its latest version, nothing to do."
+  when: passbolt_upgradable.stdout == ""
+
+- block:
+    - name: Stop nginx
+      ansible.builtin.service:
+        name: nginx
+        state: stopped
+
+    - name: Refresh apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+
+    - name: Upgrade Passbolt Pro package
+      ansible.builtin.apt:
+        name: passbolt-pro-server
+        state: latest
+
+    - name: Upgrade all other packages
+      ansible.builtin.apt:
+        upgrade: yes
+
+    - name: Clear Passbolt cache
+      ansible.builtin.command: >
+        bash -lc "/usr/share/php/passbolt/bin/cake cache clear_all"
+      args:
+        chdir: /usr/share/php/passbolt
+      become_user: "{{ passbolt.webserver }}"
+
+    - name: Start nginx
+      ansible.builtin.service:
+        name: nginx
+        state: started
+
+    - name: Run Passbolt cleanup
+      ansible.builtin.command: >
+        bash -lc "/usr/share/php/passbolt/bin/cake passbolt cleanup"
+      args:
+        chdir: /usr/share/php/passbolt
+      become_user: "{{ passbolt.webserver }}"
+
+    - name: Show current Passbolt version
+      ansible.builtin.command: >
+        bash -lc "/usr/share/php/passbolt/bin/cake passbolt version"
+      args:
+        chdir: /usr/share/php/passbolt
+      become_user: "{{ passbolt.webserver }}"
+      register: passbolt_version
+
+    - name: Display Passbolt version
+      ansible.builtin.debug:
+        msg: "🚀 Passbolt is now at version {{ passbolt_version.stdout }}"
+
+  when: passbolt_upgradable.stdout != ""
